@@ -9,7 +9,7 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // needed to parse JSON request bodies
+app.use(express.json()); // parse JSON request bodies
 
 // Mock client data (temporary until MongoDB)
 let clients = [
@@ -27,16 +27,15 @@ app.get("/api/clients", (req, res) => {
     res.json(clients);
 });
 
-// ✅ NEW: Add Client
+//  CREATE
 app.post("/api/clients", (req, res) => {
     const { name, status, notes } = req.body;
-
     if (!name || !status) {
         return res.status(400).json({ error: "Name and status are required" });
     }
 
     const newClient = {
-        id: clients.length + 1, // simple auto-increment
+        id: clients.length + 1,
         name,
         status,
         notes: notes || "",
@@ -44,6 +43,35 @@ app.post("/api/clients", (req, res) => {
 
     clients.push(newClient);
     res.status(201).json(newClient);
+});
+
+// UPDATE
+app.put("/api/clients/:id", (req, res) => {
+    const { id } = req.params;
+    const { name, status, notes } = req.body;
+
+    const client = clients.find((c) => c.id === parseInt(id));
+    if (!client) return res.status(404).json({ error: "Client not found" });
+
+    // update fields if provided
+    if (name) client.name = name;
+    if (status) client.status = status;
+    if (notes) client.notes = notes;
+
+    res.json(client);
+});
+
+// DELETE
+app.delete("/api/clients/:id", (req, res) => {
+    const { id } = req.params;
+    const clientIndex = clients.findIndex((c) => c.id === parseInt(id));
+
+    if (clientIndex === -1) {
+        return res.status(404).json({ error: "Client not found" });
+    }
+
+    const deletedClient = clients.splice(clientIndex, 1);
+    res.json({ message: "Client removed", client: deletedClient[0] });
 });
 
 // Server start
