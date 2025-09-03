@@ -23,6 +23,9 @@ app.get("/", (req, res) => {
     res.send("Welcome to Freelance Client CRM API 🚀");
 });
 
+// Error Handler (must be last middleware)
+app.use(errorHandler);
+
 // Server start
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
