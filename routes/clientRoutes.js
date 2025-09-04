@@ -1,6 +1,11 @@
 const express = require("express");
 const Client = require("../models/Client");
+const authMiddleware = require("../middleware/authMiddleware");
+
 const router = express.Router();
+
+// Protect all routes with authMiddleware
+router.use(authMiddleware);
 
 // GET all clients
 router.get("/", async (req, res, next) => {
