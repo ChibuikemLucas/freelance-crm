@@ -15,6 +15,11 @@ const clientSchema = new mongoose.Schema(
             type: String,
             default: "",
         },
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User", // 🔑 links to User model
+            required: true,
+        },
     },
     { timestamps: true }
 );
