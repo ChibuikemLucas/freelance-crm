@@ -1,3 +1,4 @@
+// models/Client.js
 const mongoose = require("mongoose");
 
 const clientSchema = new mongoose.Schema(
@@ -14,6 +15,11 @@ const clientSchema = new mongoose.Schema(
         notes: {
             type: String,
             default: "",
+        },
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User", // 🔑 links to User model
+            required: true,
         },
     },
     { timestamps: true }
