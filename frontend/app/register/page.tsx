@@ -1,17 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import { TextField, Button, Typography } from "@mui/material";
-import { motion } from "framer-motion";
+import { TextField, Button, Typography, Alert } from "@mui/material";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function RegisterPage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [message, setMessage] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log({ name, email, password });
+
+        setMessage(null);
+        setError(null);
+
+        if (!name || !email || !password) {
+            setError("Please fill out all fields.");
+            return;
+        }
+
+        if (email === "used@example.com") {
+            setError("This email is already registered.");
+            return;
+        }
+
+        if (password.length < 6) {
+            setError("Password must be at least 6 characters long.");
+            return;
+        }
+
+        setMessage("Account created successfully! Redirecting...");
     };
 
     return (
@@ -30,6 +51,36 @@ export default function RegisterPage() {
                     >
                         Create Your Account
                     </Typography>
+
+                    {/* Animated alerts */}
+                    <AnimatePresence>
+                        {error && (
+                            <motion.div
+                                key="error"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <Alert severity="error" sx={{ mb: 2, bgcolor: "#e0f2fe", color: "#0284c7" }}>
+                                    {error}
+                                </Alert>
+                            </motion.div>
+                        )}
+                        {message && (
+                            <motion.div
+                                key="message"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                <Alert severity="info" sx={{ mb: 2, bgcolor: "#e0f2fe", color: "#0284c7" }}>
+                                    {message}
+                                </Alert>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                         <TextField
