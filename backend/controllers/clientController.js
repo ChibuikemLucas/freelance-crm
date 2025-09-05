@@ -1,4 +1,4 @@
-const Client = require("../models/Client");
+const Client = require("../backend/models/Client");
 
 // @desc   Get all clients
 // @route  GET /api/clients
