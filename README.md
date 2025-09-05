@@ -38,7 +38,7 @@ The app is designed with **Node.js + Express** for the backend and **Next.js + T
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/your-username/freelance-crm.git
+git clone https://github.com/ChibuikemLucas/freelance-crm.git
 cd freelance-crm
 
 ### 2. Backend Setup
