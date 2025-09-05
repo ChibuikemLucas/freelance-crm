@@ -1,20 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TextField, Button, Typography, Alert } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        setMessage(null);
         setError(null);
+        setSuccess(null);
 
         if (!email || !password) {
             setError("Please enter both email and password.");
@@ -22,11 +21,19 @@ export default function LoginPage() {
         }
 
         if (email === "test@example.com" && password === "123456") {
-            setMessage("Login successful! Redirecting...");
+            setSuccess("Login successful! Redirecting...");
         } else {
             setError("Invalid email or password. Try again.");
         }
     };
+
+    // Auto-dismiss success toast after 3s
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => setSuccess(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [success]);
 
     return (
         <div className="relative flex h-screen items-center justify-center bg-gradient-to-br from-cyan-700 via-sky-600 to-indigo-800 px-4">
@@ -45,7 +52,7 @@ export default function LoginPage() {
                         Login to Freelance CRM
                     </Typography>
 
-                    {/* Animated alerts */}
+                    {/* Inline error alert */}
                     <AnimatePresence>
                         {error && (
                             <motion.div
@@ -55,21 +62,8 @@ export default function LoginPage() {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                <Alert severity="error" sx={{ mb: 2, bgcolor: "#e0f2fe", color: "#0284c7" }}>
+                                <Alert severity="error" sx={{ mb: 2 }}>
                                     {error}
-                                </Alert>
-                            </motion.div>
-                        )}
-                        {message && (
-                            <motion.div
-                                key="message"
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.3 }}
-                            >
-                                <Alert severity="info" sx={{ mb: 2, bgcolor: "#e0f2fe", color: "#0284c7" }}>
-                                    {message}
                                 </Alert>
                             </motion.div>
                         )}
@@ -120,6 +114,33 @@ export default function LoginPage() {
                     </form>
                 </div>
             </motion.div>
+
+            {/* Success toast notification (bottom-right) */}
+            <div className="fixed bottom-6 right-6">
+                <AnimatePresence>
+                    {success && (
+                        <motion.div
+                            key="toast"
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 50 }}
+                            transition={{ duration: 0.4 }}
+                        >
+                            <Alert
+                                severity="success"
+                                sx={{
+                                    boxShadow: 4,
+                                    borderRadius: "12px",
+                                    bgcolor: "#ecfdf5",
+                                    color: "#047857",
+                                }}
+                            >
+                                {success}
+                            </Alert>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 }
