@@ -41,7 +41,11 @@ export default function RegisterPage() {
                 return;
             }
 
-            setSuccess("Account created successfully! Redirecting...");
+            setSuccess(`Account created for ${data.user?.name || name}! Redirecting...`);
+
+            setTimeout(() => {
+                window.location.href = "/login";
+            }, 2000);
             setName("");
             setEmail("");
             setPassword("");

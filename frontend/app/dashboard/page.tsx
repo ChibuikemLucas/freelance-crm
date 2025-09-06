@@ -12,6 +12,17 @@ import {
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
+import { jwtDecode } from "jwt-decode"; // ✅ install: npm i jwt-decode
+
+type DecodedToken = {
+    name?: string;
+    username?: string;
+    email?: string;
+    exp?: number;
+};
+
+
+
 
 export default function DashboardPage() {
     const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
@@ -19,12 +30,29 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-
     const [newClient, setNewClient] = useState("");
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // Fetch user + clients
+    // ✅ Extract user info from JWT instead of calling /users/profile
+    useEffect(() => {
+        if (token) {
+            try {
+                const decoded: DecodedToken = jwtDecode(token);
+
+                setUser({
+                    name: decoded.name || decoded.username || "User",
+                    email: decoded.email || "",
+                });
+            } catch (err) {
+                console.error("Invalid token", err);
+                localStorage.removeItem("token");
+                window.location.href = "/login";
+            }
+        }
+    }, [token]);
+
+    // Fetch clients
     useEffect(() => {
         const fetchData = async () => {
             if (!token) {
@@ -33,14 +61,12 @@ export default function DashboardPage() {
             }
 
             try {
-                // 2) Fetch clients
                 const clientRes = await fetch(`${API_URL}/clients`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const clientData = await clientRes.json();
                 if (!clientRes.ok) throw new Error(clientData.message);
 
-                // ✅ Normalize response
                 setClients(Array.isArray(clientData) ? clientData : clientData.clients || []);
             } catch (err: any) {
                 setError(err.message || "Something went wrong");
@@ -54,7 +80,7 @@ export default function DashboardPage() {
         fetchData();
     }, []);
 
-    // 🔹 CRUD actions
+    // 🔹 CRUD actions (unchanged)
     const createClient = async () => {
         if (!newClient.trim()) return;
         try {
@@ -69,7 +95,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => [...prev, data]); // ✅ still works
+            setClients((prev) => [...prev, data]);
             setNewClient("");
             setSuccess("Client created successfully!");
         } catch (err: any) {
@@ -146,6 +172,18 @@ export default function DashboardPage() {
                             >
                                 Dashboard
                             </Typography>
+
+                            {/* ✅ User welcome restored */}
+                            {user && (
+                                <div className="mt-4 text-black">
+                                    <Typography>
+                                        Welcome back, <strong>{user.name}</strong> 👋
+                                    </Typography>
+                                    <Typography className="text-black/70">
+                                        Email: {user.email}
+                                    </Typography>
+                                </div>
+                            )}
 
                             {/* Error alert */}
                             <AnimatePresence>
