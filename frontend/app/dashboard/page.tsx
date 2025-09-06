@@ -33,21 +33,15 @@ export default function DashboardPage() {
             }
 
             try {
-                // 1) Fetch user
-                const userRes = await fetch(`${API_URL}/users/profile`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const userData = await userRes.json();
-                if (!userRes.ok) throw new Error(userData.message);
-                setUser(userData);
-
                 // 2) Fetch clients
                 const clientRes = await fetch(`${API_URL}/clients`, {
                     headers: { Authorization: `Bearer ${token}` },
                 });
                 const clientData = await clientRes.json();
                 if (!clientRes.ok) throw new Error(clientData.message);
-                setClients(clientData);
+
+                // ✅ Normalize response
+                setClients(Array.isArray(clientData) ? clientData : clientData.clients || []);
             } catch (err: any) {
                 setError(err.message || "Something went wrong");
                 localStorage.removeItem("token");
@@ -75,7 +69,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients([...clients, data]);
+            setClients((prev) => [...prev, data]); // ✅ still works
             setNewClient("");
             setSuccess("Client created successfully!");
         } catch (err: any) {
@@ -96,7 +90,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients(clients.map((c) => (c._id === id ? data : c)));
+            setClients((prev) => prev.map((c) => (c._id === id ? data : c)));
             setSuccess("Client updated successfully!");
         } catch (err: any) {
             setError(err.message);
@@ -111,7 +105,7 @@ export default function DashboardPage() {
             });
             if (!res.ok) throw new Error("Failed to delete client");
 
-            setClients(clients.filter((c) => c._id !== id));
+            setClients((prev) => prev.filter((c) => c._id !== id));
             setSuccess("Client deleted successfully!");
         } catch (err: any) {
             setError(err.message);
@@ -169,90 +163,82 @@ export default function DashboardPage() {
                                 )}
                             </AnimatePresence>
 
-                            {!error && user && (
-                                <>
-                                    <Typography className="mt-4 text-black">
-                                        Welcome back, <strong>{user.name}</strong> 👋
-                                    </Typography>
-                                    <Typography className="mt-2 text-black/70">
-                                        Email: {user.email}
-                                    </Typography>
+                            {/* 🔹 Clients section + logout */}
+                            <div className="mt-8 space-y-4 text-left">
+                                <Typography variant="h6" className="text-black text-center">
+                                    Your Clients
+                                </Typography>
 
-                                    {/* Clients Section */}
-                                    <div className="mt-8 space-y-4 text-left">
-                                        <Typography variant="h6" className="text-black">
-                                            Your Clients
-                                        </Typography>
-
-                                        <div className="flex gap-2">
-                                            <TextField
-                                                size="small"
-                                                value={newClient}
-                                                onChange={(e) => setNewClient(e.target.value)}
-                                                placeholder="New client name"
-                                                sx={{
-                                                    "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                                                    input: { color: "#f8fafc" },
-                                                }}
-                                            />
-                                            <Button
-                                                variant="contained"
-                                                onClick={createClient}
-                                                sx={{ borderRadius: "9999px" }}
-                                            >
-                                                Add
-                                            </Button>
-                                        </div>
-
-                                        <ul className="space-y-2">
-                                            {clients.map((client) => (
-                                                <li
-                                                    key={client._id}
-                                                    className="flex items-center justify-between bg-white/20 rounded-lg px-4 py-2"
-                                                >
-                                                    <span className="text-black">{client.name}</span>
-                                                    <div className="space-x-2">
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            onClick={() =>
-                                                                updateClient(client._id, prompt("Edit name:", client.name) || client.name)
-                                                            }
-                                                        >
-                                                            Edit
-                                                        </Button>
-                                                        <Button
-                                                            size="small"
-                                                            variant="outlined"
-                                                            color="error"
-                                                            onClick={() => deleteClient(client._id)}
-                                                        >
-                                                            Delete
-                                                        </Button>
-                                                    </div>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-
-                                    {/* 🚪 Logout */}
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.4 }}
-                                        className="mt-8"
+                                <div className="flex gap-2 justify-center">
+                                    <TextField
+                                        size="small"
+                                        value={newClient}
+                                        onChange={(e) => setNewClient(e.target.value)}
+                                        placeholder="New client name"
+                                        sx={{
+                                            "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                                            input: { color: "#f8fafc" },
+                                        }}
+                                    />
+                                    <Button
+                                        variant="contained"
+                                        onClick={createClient}
+                                        sx={{ borderRadius: "9999px" }}
                                     >
-                                        <Button
-                                            variant="contained"
-                                            color="error"
-                                            onClick={handleLogout}
-                                            className="rounded-xl shadow-md px-6 py-2"
+                                        Add
+                                    </Button>
+                                </div>
+
+                                <ul className="space-y-2">
+                                    {clients.map((client) => (
+                                        <li
+                                            key={client._id}
+                                            className="flex items-center justify-between bg-white/20 rounded-lg px-4 py-2"
                                         >
-                                            Logout
-                                        </Button>
-                                    </motion.div>
-                                </>
-                            )}
+                                            <span className="text-black">{client.name}</span>
+                                            <div className="space-x-2">
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() =>
+                                                        updateClient(
+                                                            client._id,
+                                                            prompt("Edit name:", client.name) || client.name
+                                                        )
+                                                    }
+                                                >
+                                                    Edit
+                                                </Button>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="error"
+                                                    onClick={() => deleteClient(client._id)}
+                                                >
+                                                    Delete
+                                                </Button>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+
+                            {/* 🚪 Logout */}
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.4 }}
+                                className="mt-8"
+                            >
+                                <Button
+                                    variant="contained"
+                                    color="error"
+                                    onClick={handleLogout}
+                                    className="rounded-xl shadow-md px-6 py-2"
+                                >
+                                    Logout
+                                </Button>
+                            </motion.div>
                         </CardContent>
                     </Card>
                 )}
