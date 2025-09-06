@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TextField, Button, Typography, Alert } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
+import API_URL from "../utils/api"; // 👈 dynamic backend URL
 
 export default function LoginPage() {
     const [email, setEmail] = useState("");
@@ -10,7 +11,7 @@ export default function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(null);
@@ -20,10 +21,34 @@ export default function LoginPage() {
             return;
         }
 
-        if (email === "test@example.com" && password === "123456") {
+        try {
+            const res = await fetch(`${API_URL}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.message || "Invalid email or password.");
+                return;
+            }
+
+            // Save JWT token
+            localStorage.setItem("token", data.token);
+
             setSuccess("Login successful! Redirecting...");
-        } else {
-            setError("Invalid email or password. Try again.");
+            setEmail("");
+            setPassword("");
+
+            // Redirect to dashboard after short delay
+            setTimeout(() => {
+                window.location.href = "/dashboard";
+            }, 3000);
+        } catch (err) {
+            console.error(err);
+            setError("Server error. Please try again later.");
         }
     };
 
@@ -115,7 +140,7 @@ export default function LoginPage() {
                 </div>
             </motion.div>
 
-            {/* Success toast notification (bottom-right) */}
+            {/* Success toast notification */}
             <div className="fixed bottom-6 right-6">
                 <AnimatePresence>
                     {success && (

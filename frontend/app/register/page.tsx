@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { TextField, Button, Typography, Alert } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
+import API_URL from "../utils/api";
 
 export default function RegisterPage() {
     const [name, setName] = useState("");
@@ -11,7 +12,7 @@ export default function RegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setSuccess(null);
@@ -21,17 +22,42 @@ export default function RegisterPage() {
             return;
         }
 
-        if (email === "used@example.com") {
-            setError("This email is already registered.");
-            return;
-        }
-
         if (password.length < 6) {
             setError("Password must be at least 6 characters long.");
             return;
         }
 
-        setSuccess("Account created successfully! Redirecting...");
+        try {
+            const res = await fetch(`${API_URL}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, email, password }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                setError(data.message || "Something went wrong. Please try again.");
+                return;
+            }
+
+            setSuccess(`Account created for ${data.user?.name || name}! Redirecting...`);
+
+            setTimeout(() => {
+                window.location.href = "/login";
+            }, 2000);
+            setName("");
+            setEmail("");
+            setPassword("");
+
+            // optional: redirect after short delay
+            setTimeout(() => {
+                window.location.href = "/login";
+            }, 3000);
+        } catch (err) {
+            console.error(err);
+            setError("Server error. Please try again later.");
+        }
     };
 
     // Auto-dismiss success toast after 3s
