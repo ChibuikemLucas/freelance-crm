@@ -1,40 +1,53 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Typography, Card, CardContent, CircularProgress, Alert, Button } from "@mui/material";
+import {
+    Typography,
+    Card,
+    CardContent,
+    CircularProgress,
+    Alert,
+    Button,
+    TextField,
+} from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
 
 export default function DashboardPage() {
     const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
+    const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
 
+    const [newClient, setNewClient] = useState("");
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+
+    // Fetch user + clients
     useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem("token");
-
+        const fetchData = async () => {
             if (!token) {
                 window.location.href = "/login";
                 return;
             }
 
             try {
-                const res = await fetch(`${API_URL}/users/profile`, {
-                    method: "GET",
-                    headers: {
-                        "Content-Type": "application/json",
-                        Authorization: `Bearer ${token}`,
-                    },
+                // 1) Fetch user
+                const userRes = await fetch(`${API_URL}/users/profile`, {
+                    headers: { Authorization: `Bearer ${token}` },
                 });
+                const userData = await userRes.json();
+                if (!userRes.ok) throw new Error(userData.message);
+                setUser(userData);
 
-                const data = await res.json();
-
-                if (!res.ok) {
-                    throw new Error(data.message || "Failed to load user profile");
-                }
-
-                setUser(data);
+                // 2) Fetch clients
+                const clientRes = await fetch(`${API_URL}/clients`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                const clientData = await clientRes.json();
+                if (!clientRes.ok) throw new Error(clientData.message);
+                setClients(clientData);
             } catch (err: any) {
                 setError(err.message || "Something went wrong");
                 localStorage.removeItem("token");
@@ -44,13 +57,79 @@ export default function DashboardPage() {
             }
         };
 
-        fetchUser();
+        fetchData();
     }, []);
+
+    // 🔹 CRUD actions
+    const createClient = async () => {
+        if (!newClient.trim()) return;
+        try {
+            const res = await fetch(`${API_URL}/clients`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ name: newClient }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+
+            setClients([...clients, data]);
+            setNewClient("");
+            setSuccess("Client created successfully!");
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const updateClient = async (id: string, name: string) => {
+        try {
+            const res = await fetch(`${API_URL}/clients/${id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ name }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+
+            setClients(clients.map((c) => (c._id === id ? data : c)));
+            setSuccess("Client updated successfully!");
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const deleteClient = async (id: string) => {
+        try {
+            const res = await fetch(`${API_URL}/clients/${id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to delete client");
+
+            setClients(clients.filter((c) => c._id !== id));
+            setSuccess("Client deleted successfully!");
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
 
     const handleLogout = () => {
         localStorage.removeItem("token");
         window.location.href = "/login";
     };
+
+    // Auto-dismiss success toast
+    useEffect(() => {
+        if (success) {
+            const timer = setTimeout(() => setSuccess(null), 3000);
+            return () => clearTimeout(timer);
+        }
+    }, [success]);
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-cyan-700 via-sky-600 to-indigo-800 p-6 flex items-center justify-center">
@@ -74,6 +153,7 @@ export default function DashboardPage() {
                                 Dashboard
                             </Typography>
 
+                            {/* Error alert */}
                             <AnimatePresence>
                                 {error && (
                                     <motion.div
@@ -97,11 +177,65 @@ export default function DashboardPage() {
                                     <Typography className="mt-2 text-black/70">
                                         Email: {user.email}
                                     </Typography>
-                                    <Typography className="mt-6 text-black">
-                                        Your clients will show up here soon.
-                                    </Typography>
 
-                                    {/* 🚪 Logout Button */}
+                                    {/* Clients Section */}
+                                    <div className="mt-8 space-y-4 text-left">
+                                        <Typography variant="h6" className="text-black">
+                                            Your Clients
+                                        </Typography>
+
+                                        <div className="flex gap-2">
+                                            <TextField
+                                                size="small"
+                                                value={newClient}
+                                                onChange={(e) => setNewClient(e.target.value)}
+                                                placeholder="New client name"
+                                                sx={{
+                                                    "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
+                                                    input: { color: "#f8fafc" },
+                                                }}
+                                            />
+                                            <Button
+                                                variant="contained"
+                                                onClick={createClient}
+                                                sx={{ borderRadius: "9999px" }}
+                                            >
+                                                Add
+                                            </Button>
+                                        </div>
+
+                                        <ul className="space-y-2">
+                                            {clients.map((client) => (
+                                                <li
+                                                    key={client._id}
+                                                    className="flex items-center justify-between bg-white/20 rounded-lg px-4 py-2"
+                                                >
+                                                    <span className="text-black">{client.name}</span>
+                                                    <div className="space-x-2">
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() =>
+                                                                updateClient(client._id, prompt("Edit name:", client.name) || client.name)
+                                                            }
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="error"
+                                                            onClick={() => deleteClient(client._id)}
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+
+                                    {/* 🚪 Logout */}
                                     <motion.div
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
@@ -123,6 +257,33 @@ export default function DashboardPage() {
                     </Card>
                 )}
             </motion.div>
+
+            {/* ✅ Success Toast */}
+            <div className="fixed bottom-6 right-6">
+                <AnimatePresence>
+                    {success && (
+                        <motion.div
+                            key="toast"
+                            initial={{ opacity: 0, x: 50 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 50 }}
+                            transition={{ duration: 0.4 }}
+                        >
+                            <Alert
+                                severity="success"
+                                sx={{
+                                    boxShadow: 4,
+                                    borderRadius: "12px",
+                                    bgcolor: "#ecfdf5",
+                                    color: "#047857",
+                                }}
+                            >
+                                {success}
+                            </Alert>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
         </div>
     );
 }
