@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { TextField, Button, Typography, Alert } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
-import API_URL from "../utils/api"; // 👈 import your API base URL
+import API_URL from "../utils/api";
 
 export default function RegisterPage() {
     const [name, setName] = useState("");
