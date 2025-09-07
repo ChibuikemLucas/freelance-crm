@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
-import { jwtDecode } from "jwt-decode"; // ✅ install: npm i jwt-decode
+import { jwtDecode } from "jwt-decode";
 
 type DecodedToken = {
     name?: string;
@@ -21,25 +21,28 @@ type DecodedToken = {
     exp?: number;
 };
 
-
-
-
 export default function DashboardPage() {
     const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
     const [clients, setClients] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [newClient, setNewClient] = useState("");
+
+    // 🔹 Add Client Form
+    const [clientForm, setClientForm] = useState({
+        name: "",
+        email: "",
+        phone: "",
+        status: "Proposal Sent", // ✅ valid default
+    });
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // ✅ Extract user info from JWT instead of calling /users/profile
+    // ✅ Decode JWT for user info
     useEffect(() => {
         if (token) {
             try {
                 const decoded: DecodedToken = jwtDecode(token);
-
                 setUser({
                     name: decoded.name || decoded.username || "User",
                     email: decoded.email || "",
@@ -52,7 +55,7 @@ export default function DashboardPage() {
         }
     }, [token]);
 
-    // Fetch clients
+    // ✅ Fetch clients
     useEffect(() => {
         const fetchData = async () => {
             if (!token) {
@@ -80,30 +83,49 @@ export default function DashboardPage() {
         fetchData();
     }, []);
 
-    // 🔹 CRUD actions (unchanged)
+    // ✅ Handle input changes for create form
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setClientForm((prev) => ({ ...prev, [name]: value }));
+    };
+
+    // ✅ Create client
     const createClient = async () => {
-        if (!newClient.trim()) return;
         try {
+            const payload = { ...clientForm };
+
             const res = await fetch(`${API_URL}/clients`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ name: newClient }),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
             setClients((prev) => [...prev, data]);
-            setNewClient("");
+            setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent" });
             setSuccess("Client created successfully!");
         } catch (err: any) {
             setError(err.message);
         }
     };
 
-    const updateClient = async (id: string, name: string) => {
+    // ✅ Update client (all fields, exact enum values)
+    const updateClient = async (id: string, client: any) => {
+        const updated = {
+            name: prompt("Edit name:", client.name) || client.name,
+            email: prompt("Edit email:", client.email) || client.email,
+            phone: prompt("Edit phone:", client.phone) || client.phone,
+            status:
+                prompt(
+                    "Edit status (Proposal Sent / Interview Scheduled / Rejected / Won):",
+                    client.status
+                ) || client.status,
+        };
+
         try {
             const res = await fetch(`${API_URL}/clients/${id}`, {
                 method: "PUT",
@@ -111,7 +133,7 @@ export default function DashboardPage() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify(updated),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
@@ -123,6 +145,7 @@ export default function DashboardPage() {
         }
     };
 
+    // ✅ Delete client
     const deleteClient = async (id: string) => {
         try {
             const res = await fetch(`${API_URL}/clients/${id}`, {
@@ -143,7 +166,7 @@ export default function DashboardPage() {
         window.location.href = "/login";
     };
 
-    // Auto-dismiss success toast
+    // ✅ Auto-dismiss success toast
     useEffect(() => {
         if (success) {
             const timer = setTimeout(() => setSuccess(null), 3000);
@@ -157,7 +180,7 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="w-full max-w-2xl"
+                className="w-full max-w-5xl"
             >
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
@@ -173,7 +196,7 @@ export default function DashboardPage() {
                                 Dashboard
                             </Typography>
 
-                            {/* ✅ User welcome restored */}
+                            {/* ✅ User welcome */}
                             {user && (
                                 <div className="mt-4 text-black">
                                     <Typography>
@@ -201,64 +224,100 @@ export default function DashboardPage() {
                                 )}
                             </AnimatePresence>
 
-                            {/* 🔹 Clients section + logout */}
+                            {/* 🔹 Add Client Form */}
                             <div className="mt-8 space-y-4 text-left">
                                 <Typography variant="h6" className="text-black text-center">
-                                    Your Clients
+                                    Add New Client
                                 </Typography>
 
-                                <div className="flex gap-2 justify-center">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <TextField
                                         size="small"
-                                        value={newClient}
-                                        onChange={(e) => setNewClient(e.target.value)}
-                                        placeholder="New client name"
-                                        sx={{
-                                            "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                                            input: { color: "#f8fafc" },
-                                        }}
+                                        label="Name"
+                                        name="name"
+                                        value={clientForm.name}
+                                        onChange={handleInputChange}
                                     />
-                                    <Button
-                                        variant="contained"
-                                        onClick={createClient}
-                                        sx={{ borderRadius: "9999px" }}
+                                    <TextField
+                                        size="small"
+                                        label="Email"
+                                        name="email"
+                                        value={clientForm.email}
+                                        onChange={handleInputChange}
+                                    />
+                                    <TextField
+                                        size="small"
+                                        label="Phone"
+                                        name="phone"
+                                        value={clientForm.phone}
+                                        onChange={handleInputChange}
+                                    />
+                                    <TextField
+                                        select
+                                        size="small"
+                                        label="Status"
+                                        name="status"
+                                        value={clientForm.status}
+                                        onChange={handleInputChange}
+                                        SelectProps={{ native: true }}
                                     >
-                                        Add
-                                    </Button>
+                                        <option value="Proposal Sent">Proposal Sent</option>
+                                        <option value="Interview Scheduled">Interview Scheduled</option>
+                                        <option value="Rejected">Rejected</option>
+                                        <option value="Won">Won</option>
+                                    </TextField>
                                 </div>
 
-                                <ul className="space-y-2">
-                                    {clients.map((client) => (
-                                        <li
-                                            key={client._id}
-                                            className="flex items-center justify-between bg-white/20 rounded-lg px-4 py-2"
+                                <Button
+                                    variant="contained"
+                                    onClick={createClient}
+                                    sx={{ borderRadius: "9999px", marginTop: "12px" }}
+                                >
+                                    Add Client
+                                </Button>
+                            </div>
+
+                            {/* 🔹 Clients Grid */}
+                            <div className="mt-10 text-left">
+                                <Typography variant="h6" className="text-black text-center mb-4">
+                                    Your Clients
+                                </Typography>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {clients.map((client, index) => (
+                                        <Card
+                                            key={client._id || index} // ✅ fix key warning
+                                            className="rounded-xl shadow-md bg-white/80 p-4"
                                         >
-                                            <span className="text-black">{client.name}</span>
-                                            <div className="space-x-2">
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() =>
-                                                        updateClient(
-                                                            client._id,
-                                                            prompt("Edit name:", client.name) || client.name
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="error"
-                                                    onClick={() => deleteClient(client._id)}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </li>
+                                            <CardContent>
+                                                <div className="text-black">
+                                                    <strong>{client.name}</strong> <br />
+                                                    <span className="text-sm text-black/70">
+                                                        {client.email} <br />
+                                                        {client.phone} <br />
+                                                        {client.status}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-3 space-x-2">
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => updateClient(client._id, client)}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="error"
+                                                        onClick={() => deleteClient(client._id)}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
 
                             {/* 🚪 Logout */}
