@@ -9,20 +9,24 @@ import {
     Alert,
     Button,
     TextField,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
-import { jwtDecode } from "jwt-decode"; // ✅ install: npm i jwt-decode
+import { jwtDecode } from "jwt-decode";
 
 type DecodedToken = {
+    id?: string;
+    _id?: string;
+    userId?: string;
     name?: string;
     username?: string;
     email?: string;
     exp?: number;
 };
-
-
-
 
 export default function DashboardPage() {
     const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
@@ -30,16 +34,25 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
-    const [newClient, setNewClient] = useState("");
+
+    const [clientForm, setClientForm] = useState({
+        name: "",
+        email: "",
+        phone: "",
+        status: "Proposal Sent",
+    });
+
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState<any>({});
+    const [editId, setEditId] = useState<string | null>(null);
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // ✅ Extract user info from JWT instead of calling /users/profile
+    // ✅ Decode JWT once
     useEffect(() => {
         if (token) {
             try {
                 const decoded: DecodedToken = jwtDecode(token);
-
                 setUser({
                     name: decoded.name || decoded.username || "User",
                     email: decoded.email || "",
@@ -52,37 +65,36 @@ export default function DashboardPage() {
         }
     }, [token]);
 
-    // Fetch clients
+    // ✅ Fetch clients
+    const fetchClients = async () => {
+        if (!token) {
+            window.location.href = "/login";
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_URL}/clients`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+
+            setClients(Array.isArray(data.data) ? data.data : []);
+        } catch (err: any) {
+            setError(err.message || "Something went wrong");
+            localStorage.removeItem("token");
+            setTimeout(() => (window.location.href = "/login"), 2000);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchData = async () => {
-            if (!token) {
-                window.location.href = "/login";
-                return;
-            }
+        if (token) fetchClients();
+    }, [token]);
 
-            try {
-                const clientRes = await fetch(`${API_URL}/clients`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const clientData = await clientRes.json();
-                if (!clientRes.ok) throw new Error(clientData.message);
-
-                setClients(Array.isArray(clientData) ? clientData : clientData.clients || []);
-            } catch (err: any) {
-                setError(err.message || "Something went wrong");
-                localStorage.removeItem("token");
-                setTimeout(() => (window.location.href = "/login"), 2000);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    // 🔹 CRUD actions (unchanged)
+    // ✅ Create client
     const createClient = async () => {
-        if (!newClient.trim()) return;
         try {
             const res = await fetch(`${API_URL}/clients`, {
                 method: "POST",
@@ -90,46 +102,65 @@ export default function DashboardPage() {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ name: newClient }),
+                body: JSON.stringify(clientForm),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => [...prev, data]);
-            setNewClient("");
+            setClients((prev) => [...prev, data.data]);
+            setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent" });
             setSuccess("Client created successfully!");
         } catch (err: any) {
             setError(err.message);
         }
     };
 
-    const updateClient = async (id: string, name: string) => {
+    // ✅ Open edit modal
+    const openEditModal = (client: any) => {
+        setEditForm({ ...client });
+        setEditId(client._id);
+        setEditModalOpen(true);
+    };
+
+    // ✅ Handle edit form change
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setEditForm((prev: any) => ({ ...prev, [name]: value }));
+    };
+
+    // ✅ Save edit
+    const saveEdit = async () => {
+        if (!editId) return;
+
         try {
-            const res = await fetch(`${API_URL}/clients/${id}`, {
+            const res = await fetch(`${API_URL}/clients/${editId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify({ name }),
+                body: JSON.stringify(editForm),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => prev.map((c) => (c._id === id ? data : c)));
+            setClients((prev) => prev.map((c) => (c._id === editId ? data.data : c)));
             setSuccess("Client updated successfully!");
+            setEditModalOpen(false);
         } catch (err: any) {
             setError(err.message);
         }
     };
 
+    // ✅ Delete client
     const deleteClient = async (id: string) => {
         try {
             const res = await fetch(`${API_URL}/clients/${id}`, {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!res.ok) throw new Error("Failed to delete client");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
 
             setClients((prev) => prev.filter((c) => c._id !== id));
             setSuccess("Client deleted successfully!");
@@ -138,12 +169,16 @@ export default function DashboardPage() {
         }
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setClientForm((prev) => ({ ...prev, [name]: value }));
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("token");
         window.location.href = "/login";
     };
 
-    // Auto-dismiss success toast
     useEffect(() => {
         if (success) {
             const timer = setTimeout(() => setSuccess(null), 3000);
@@ -157,7 +192,7 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="w-full max-w-2xl"
+                className="w-full max-w-5xl"
             >
                 {loading ? (
                     <div className="flex justify-center items-center h-64">
@@ -173,7 +208,6 @@ export default function DashboardPage() {
                                 Dashboard
                             </Typography>
 
-                            {/* ✅ User welcome restored */}
                             {user && (
                                 <div className="mt-4 text-black">
                                     <Typography>
@@ -201,64 +235,98 @@ export default function DashboardPage() {
                                 )}
                             </AnimatePresence>
 
-                            {/* 🔹 Clients section + logout */}
+                            {/* 🔹 Add Client Form */}
                             <div className="mt-8 space-y-4 text-left">
                                 <Typography variant="h6" className="text-black text-center">
-                                    Your Clients
+                                    Add New Client
                                 </Typography>
-
-                                <div className="flex gap-2 justify-center">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <TextField
                                         size="small"
-                                        value={newClient}
-                                        onChange={(e) => setNewClient(e.target.value)}
-                                        placeholder="New client name"
-                                        sx={{
-                                            "& fieldset": { borderColor: "rgba(255,255,255,0.2)" },
-                                            input: { color: "#f8fafc" },
-                                        }}
+                                        label="Name"
+                                        name="name"
+                                        value={clientForm.name}
+                                        onChange={handleInputChange}
                                     />
-                                    <Button
-                                        variant="contained"
-                                        onClick={createClient}
-                                        sx={{ borderRadius: "9999px" }}
+                                    <TextField
+                                        size="small"
+                                        label="Email"
+                                        name="email"
+                                        value={clientForm.email}
+                                        onChange={handleInputChange}
+                                    />
+                                    <TextField
+                                        size="small"
+                                        label="Phone"
+                                        name="phone"
+                                        value={clientForm.phone}
+                                        onChange={handleInputChange}
+                                    />
+                                    <TextField
+                                        select
+                                        size="small"
+                                        label="Status"
+                                        name="status"
+                                        value={clientForm.status}
+                                        onChange={handleInputChange}
+                                        SelectProps={{ native: true }}
                                     >
-                                        Add
-                                    </Button>
+                                        <option value="Proposal Sent">Proposal Sent</option>
+                                        <option value="Interview Scheduled">Interview Scheduled</option>
+                                        <option value="Rejected">Rejected</option>
+                                        <option value="Won">Won</option>
+                                    </TextField>
                                 </div>
+                                <Button
+                                    variant="contained"
+                                    onClick={createClient}
+                                    sx={{ borderRadius: "9999px", marginTop: "12px" }}
+                                >
+                                    Add Client
+                                </Button>
+                            </div>
 
-                                <ul className="space-y-2">
-                                    {clients.map((client) => (
-                                        <li
-                                            key={client._id}
-                                            className="flex items-center justify-between bg-white/20 rounded-lg px-4 py-2"
+                            {/* 🔹 Clients List */}
+                            <div className="mt-10 text-left">
+                                <Typography variant="h6" className="text-black text-center mb-4">
+                                    Your Clients
+                                </Typography>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {clients.map((client, index) => (
+                                        <Card
+                                            key={client._id || index}
+                                            className="rounded-xl shadow-md bg-white/30 p-4"
                                         >
-                                            <span className="text-black">{client.name}</span>
-                                            <div className="space-x-2">
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    onClick={() =>
-                                                        updateClient(
-                                                            client._id,
-                                                            prompt("Edit name:", client.name) || client.name
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </Button>
-                                                <Button
-                                                    size="small"
-                                                    variant="outlined"
-                                                    color="error"
-                                                    onClick={() => deleteClient(client._id)}
-                                                >
-                                                    Delete
-                                                </Button>
-                                            </div>
-                                        </li>
+                                            <CardContent>
+                                                <div className="text-black">
+                                                    <strong>{client.name}</strong> <br />
+                                                    <span className="text-sm text-black/70">
+                                                        {client.email} <br />
+                                                        {client.phone} <br />
+                                                        {client.status}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-3 space-x-2">
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        onClick={() => openEditModal(client)}
+                                                    >
+                                                        Edit
+                                                    </Button>
+                                                    <Button
+                                                        size="small"
+                                                        variant="outlined"
+                                                        color="error"
+                                                        onClick={() => deleteClient(client._id)}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
                                     ))}
-                                </ul>
+                                </div>
                             </div>
 
                             {/* 🚪 Logout */}
@@ -281,6 +349,58 @@ export default function DashboardPage() {
                     </Card>
                 )}
             </motion.div>
+
+            {/* ✏️ Edit Client Modal */}
+            <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+                <DialogTitle>Edit Client</DialogTitle>
+                <DialogContent className="space-y-3">
+                    <TextField
+                        margin="dense"
+                        label="Name"
+                        name="name"
+                        fullWidth
+                        value={editForm.name || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Email"
+                        name="email"
+                        fullWidth
+                        value={editForm.email || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Phone"
+                        name="phone"
+                        fullWidth
+                        value={editForm.phone || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        select
+                        label="Status"
+                        name="status"
+                        fullWidth
+                        value={editForm.status || ""}
+                        onChange={handleEditChange}
+                        SelectProps={{ native: true }}
+                    >
+                        <option value="Proposal Sent">Proposal Sent</option>
+                        <option value="Interview Scheduled">Interview Scheduled</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Won">Won</option>
+                    </TextField>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                    <Button onClick={saveEdit} variant="contained">
+                        Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* ✅ Success Toast */}
             <div className="fixed bottom-6 right-6">

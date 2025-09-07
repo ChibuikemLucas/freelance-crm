@@ -4,7 +4,7 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// ✅ Protect all routes with authMiddleware
+// ✅ Protect all routes
 router.use(authMiddleware);
 
 // @route   GET /api/clients
@@ -22,13 +22,15 @@ router.get("/", async (req, res, next) => {
 // @desc    Add new client
 router.post("/", async (req, res, next) => {
     try {
-        const { name, status, notes } = req.body;
+        const { name, email, phone, status, notes } = req.body;
 
         const client = new Client({
             name,
+            email,
+            phone,
             status,
             notes,
-            user: req.user.id, // 🔒 assign owner
+            user: req.user.id, // 🔒 assign to logged-in user
         });
 
         await client.save();
