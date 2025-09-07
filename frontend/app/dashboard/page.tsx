@@ -9,12 +9,19 @@ import {
     Alert,
     Button,
     TextField,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from "@mui/material";
 import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
 import { jwtDecode } from "jwt-decode";
 
 type DecodedToken = {
+    id?: string;
+    _id?: string;
+    userId?: string;
     name?: string;
     username?: string;
     email?: string;
@@ -35,6 +42,10 @@ export default function DashboardPage() {
         status: "Proposal Sent",
     });
 
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [editForm, setEditForm] = useState<any>({});
+    const [editId, setEditId] = useState<string | null>(null);
+
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
     // ✅ Decode JWT once
@@ -54,7 +65,7 @@ export default function DashboardPage() {
         }
     }, [token]);
 
-    // ✅ Fetch clients whenever token changes
+    // ✅ Fetch clients
     const fetchClients = async () => {
         if (!token) {
             window.location.href = "/login";
@@ -68,7 +79,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients(Array.isArray(data) ? data : data.clients || []);
+            setClients(Array.isArray(data.data) ? data.data : []);
         } catch (err: any) {
             setError(err.message || "Something went wrong");
             localStorage.removeItem("token");
@@ -96,7 +107,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => [...prev, data]);
+            setClients((prev) => [...prev, data.data]);
             setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent" });
             setSuccess("Client created successfully!");
         } catch (err: any) {
@@ -104,33 +115,38 @@ export default function DashboardPage() {
         }
     };
 
-    // ✅ Update client
-    const updateClient = async (id: string, client: any) => {
-        const updated = {
-            name: prompt("Edit name:", client.name) || client.name,
-            email: prompt("Edit email:", client.email) || client.email,
-            phone: prompt("Edit phone:", client.phone) || client.phone,
-            status:
-                prompt(
-                    "Edit status (Proposal Sent / Interview Scheduled / Rejected / Won):",
-                    client.status
-                ) || client.status,
-        };
+    // ✅ Open edit modal
+    const openEditModal = (client: any) => {
+        setEditForm({ ...client });
+        setEditId(client._id);
+        setEditModalOpen(true);
+    };
+
+    // ✅ Handle edit form change
+    const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setEditForm((prev: any) => ({ ...prev, [name]: value }));
+    };
+
+    // ✅ Save edit
+    const saveEdit = async () => {
+        if (!editId) return;
 
         try {
-            const res = await fetch(`${API_URL}/clients/${id}`, {
+            const res = await fetch(`${API_URL}/clients/${editId}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(updated),
+                body: JSON.stringify(editForm),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => prev.map((c) => (c._id === id ? data : c)));
+            setClients((prev) => prev.map((c) => (c._id === editId ? data.data : c)));
             setSuccess("Client updated successfully!");
+            setEditModalOpen(false);
         } catch (err: any) {
             setError(err.message);
         }
@@ -143,7 +159,8 @@ export default function DashboardPage() {
                 method: "DELETE",
                 headers: { Authorization: `Bearer ${token}` },
             });
-            if (!res.ok) throw new Error("Failed to delete client");
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
 
             setClients((prev) => prev.filter((c) => c._id !== id));
             setSuccess("Client deleted successfully!");
@@ -293,7 +310,7 @@ export default function DashboardPage() {
                                                     <Button
                                                         size="small"
                                                         variant="outlined"
-                                                        onClick={() => updateClient(client._id, client)}
+                                                        onClick={() => openEditModal(client)}
                                                     >
                                                         Edit
                                                     </Button>
@@ -332,6 +349,58 @@ export default function DashboardPage() {
                     </Card>
                 )}
             </motion.div>
+
+            {/* ✏️ Edit Client Modal */}
+            <Dialog open={editModalOpen} onClose={() => setEditModalOpen(false)}>
+                <DialogTitle>Edit Client</DialogTitle>
+                <DialogContent className="space-y-3">
+                    <TextField
+                        margin="dense"
+                        label="Name"
+                        name="name"
+                        fullWidth
+                        value={editForm.name || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Email"
+                        name="email"
+                        fullWidth
+                        value={editForm.email || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        label="Phone"
+                        name="phone"
+                        fullWidth
+                        value={editForm.phone || ""}
+                        onChange={handleEditChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        select
+                        label="Status"
+                        name="status"
+                        fullWidth
+                        value={editForm.status || ""}
+                        onChange={handleEditChange}
+                        SelectProps={{ native: true }}
+                    >
+                        <option value="Proposal Sent">Proposal Sent</option>
+                        <option value="Interview Scheduled">Interview Scheduled</option>
+                        <option value="Rejected">Rejected</option>
+                        <option value="Won">Won</option>
+                    </TextField>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>
+                    <Button onClick={saveEdit} variant="contained">
+                        Save
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             {/* ✅ Success Toast */}
             <div className="fixed bottom-6 right-6">
