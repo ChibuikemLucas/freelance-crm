@@ -28,17 +28,16 @@ export default function DashboardPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    // 🔹 Add Client Form
     const [clientForm, setClientForm] = useState({
         name: "",
         email: "",
         phone: "",
-        status: "Proposal Sent", // ✅ valid default
+        status: "Proposal Sent",
     });
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-    // ✅ Decode JWT for user info
+    // ✅ Decode JWT once
     useEffect(() => {
         if (token) {
             try {
@@ -55,52 +54,44 @@ export default function DashboardPage() {
         }
     }, [token]);
 
-    // ✅ Fetch clients
-    useEffect(() => {
-        const fetchData = async () => {
-            if (!token) {
-                window.location.href = "/login";
-                return;
-            }
+    // ✅ Fetch clients whenever token changes
+    const fetchClients = async () => {
+        if (!token) {
+            window.location.href = "/login";
+            return;
+        }
 
-            try {
-                const clientRes = await fetch(`${API_URL}/clients`, {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                const clientData = await clientRes.json();
-                if (!clientRes.ok) throw new Error(clientData.message);
+        try {
+            const res = await fetch(`${API_URL}/clients`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
 
-                setClients(Array.isArray(clientData) ? clientData : clientData.clients || []);
-            } catch (err: any) {
-                setError(err.message || "Something went wrong");
-                localStorage.removeItem("token");
-                setTimeout(() => (window.location.href = "/login"), 2000);
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchData();
-    }, []);
-
-    // ✅ Handle input changes for create form
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setClientForm((prev) => ({ ...prev, [name]: value }));
+            setClients(Array.isArray(data) ? data : data.clients || []);
+        } catch (err: any) {
+            setError(err.message || "Something went wrong");
+            localStorage.removeItem("token");
+            setTimeout(() => (window.location.href = "/login"), 2000);
+        } finally {
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        if (token) fetchClients();
+    }, [token]);
 
     // ✅ Create client
     const createClient = async () => {
         try {
-            const payload = { ...clientForm };
-
             const res = await fetch(`${API_URL}/clients`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${token}`,
                 },
-                body: JSON.stringify(payload),
+                body: JSON.stringify(clientForm),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
@@ -113,7 +104,7 @@ export default function DashboardPage() {
         }
     };
 
-    // ✅ Update client (all fields, exact enum values)
+    // ✅ Update client
     const updateClient = async (id: string, client: any) => {
         const updated = {
             name: prompt("Edit name:", client.name) || client.name,
@@ -161,12 +152,16 @@ export default function DashboardPage() {
         }
     };
 
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setClientForm((prev) => ({ ...prev, [name]: value }));
+    };
+
     const handleLogout = () => {
         localStorage.removeItem("token");
         window.location.href = "/login";
     };
 
-    // ✅ Auto-dismiss success toast
     useEffect(() => {
         if (success) {
             const timer = setTimeout(() => setSuccess(null), 3000);
@@ -196,7 +191,6 @@ export default function DashboardPage() {
                                 Dashboard
                             </Typography>
 
-                            {/* ✅ User welcome */}
                             {user && (
                                 <div className="mt-4 text-black">
                                     <Typography>
@@ -229,7 +223,6 @@ export default function DashboardPage() {
                                 <Typography variant="h6" className="text-black text-center">
                                     Add New Client
                                 </Typography>
-
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                     <TextField
                                         size="small"
@@ -267,7 +260,6 @@ export default function DashboardPage() {
                                         <option value="Won">Won</option>
                                     </TextField>
                                 </div>
-
                                 <Button
                                     variant="contained"
                                     onClick={createClient}
@@ -277,7 +269,7 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
 
-                            {/* 🔹 Clients Grid */}
+                            {/* 🔹 Clients List */}
                             <div className="mt-10 text-left">
                                 <Typography variant="h6" className="text-black text-center mb-4">
                                     Your Clients
@@ -285,8 +277,8 @@ export default function DashboardPage() {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {clients.map((client, index) => (
                                         <Card
-                                            key={client._id || index} // ✅ fix key warning
-                                            className="rounded-xl shadow-md bg-white/80 p-4"
+                                            key={client._id || index}
+                                            className="rounded-xl shadow-md bg-white/30 p-4"
                                         >
                                             <CardContent>
                                                 <div className="text-black">
