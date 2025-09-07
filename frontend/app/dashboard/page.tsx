@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     Typography,
     Card,
@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import API_URL from "../utils/api";
 import { jwtDecode } from "jwt-decode";
 
+// ✅ Types
 type DecodedToken = {
     id?: string;
     _id?: string;
@@ -28,14 +29,22 @@ type DecodedToken = {
     exp?: number;
 };
 
+type Client = {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+    status: "Proposal Sent" | "Interview Scheduled" | "Rejected" | "Won";
+};
+
 export default function DashboardPage() {
     const [user, setUser] = useState<{ name?: string; email?: string } | null>(null);
-    const [clients, setClients] = useState<any[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    const [clientForm, setClientForm] = useState({
+    const [clientForm, setClientForm] = useState<Omit<Client, "_id">>({
         name: "",
         email: "",
         phone: "",
@@ -43,7 +52,7 @@ export default function DashboardPage() {
     });
 
     const [editModalOpen, setEditModalOpen] = useState(false);
-    const [editForm, setEditForm] = useState<any>({});
+    const [editForm, setEditForm] = useState<Partial<Client>>({});
     const [editId, setEditId] = useState<string | null>(null);
 
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -66,7 +75,7 @@ export default function DashboardPage() {
     }, [token]);
 
     // ✅ Fetch clients
-    const fetchClients = async () => {
+    const fetchClients = useCallback(async () => {
         if (!token) {
             window.location.href = "/login";
             return;
@@ -80,18 +89,20 @@ export default function DashboardPage() {
             if (!res.ok) throw new Error(data.message);
 
             setClients(Array.isArray(data.data) ? data.data : []);
-        } catch (err: any) {
-            setError(err.message || "Something went wrong");
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message || "Something went wrong");
+            }
             localStorage.removeItem("token");
             setTimeout(() => (window.location.href = "/login"), 2000);
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         if (token) fetchClients();
-    }, [token]);
+    }, [token, fetchClients]);
 
     // ✅ Create client
     const createClient = async () => {
@@ -110,13 +121,13 @@ export default function DashboardPage() {
             setClients((prev) => [...prev, data.data]);
             setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent" });
             setSuccess("Client created successfully!");
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (err instanceof Error) setError(err.message);
         }
     };
 
     // ✅ Open edit modal
-    const openEditModal = (client: any) => {
+    const openEditModal = (client: Client) => {
         setEditForm({ ...client });
         setEditId(client._id);
         setEditModalOpen(true);
@@ -125,7 +136,7 @@ export default function DashboardPage() {
     // ✅ Handle edit form change
     const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
-        setEditForm((prev: any) => ({ ...prev, [name]: value }));
+        setEditForm((prev) => ({ ...prev, [name]: value }));
     };
 
     // ✅ Save edit
@@ -147,8 +158,8 @@ export default function DashboardPage() {
             setClients((prev) => prev.map((c) => (c._id === editId ? data.data : c)));
             setSuccess("Client updated successfully!");
             setEditModalOpen(false);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (err instanceof Error) setError(err.message);
         }
     };
 
@@ -164,8 +175,8 @@ export default function DashboardPage() {
 
             setClients((prev) => prev.filter((c) => c._id !== id));
             setSuccess("Client deleted successfully!");
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (err instanceof Error) setError(err.message);
         }
     };
 
@@ -292,9 +303,9 @@ export default function DashboardPage() {
                                     Your Clients
                                 </Typography>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                    {clients.map((client, index) => (
+                                    {clients.map((client) => (
                                         <Card
-                                            key={client._id || index}
+                                            key={client._id}
                                             className="rounded-xl shadow-md bg-white/30 p-4"
                                         >
                                             <CardContent>
