@@ -35,6 +35,7 @@ type Client = {
     email: string;
     phone: string;
     status: "Proposal Sent" | "Interview Scheduled" | "Rejected" | "Won";
+    notes?: string; // 👈 added notes
 };
 
 export default function DashboardPage() {
@@ -49,6 +50,7 @@ export default function DashboardPage() {
         email: "",
         phone: "",
         status: "Proposal Sent",
+        notes: "", // 👈 added
     });
 
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -88,7 +90,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients(Array.isArray(data.data) ? data.data : []);
+            setClients(Array.isArray(data) ? data : []); // backend sends plain array
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message || "Something went wrong");
@@ -118,8 +120,8 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => [...prev, data.data]);
-            setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent" });
+            setClients((prev) => [...prev, data]);
+            setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent", notes: "" });
             setSuccess("Client created successfully!");
         } catch (err) {
             if (err instanceof Error) setError(err.message);
@@ -155,7 +157,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => prev.map((c) => (c._id === editId ? data.data : c)));
+            setClients((prev) => prev.map((c) => (c._id === editId ? data : c)));
             setSuccess("Client updated successfully!");
             setEditModalOpen(false);
         } catch (err) {
@@ -222,11 +224,9 @@ export default function DashboardPage() {
                             {user && (
                                 <div className="mt-4 text-black">
                                     <Typography>
-                                        Welcome back, <strong>{user.name}</strong> 👋
+                                        Welcome back 👋
                                     </Typography>
-                                    <Typography className="text-black/70">
-                                        Email: {user.email}
-                                    </Typography>
+
                                 </div>
                             )}
 
@@ -287,6 +287,15 @@ export default function DashboardPage() {
                                         <option value="Rejected">Rejected</option>
                                         <option value="Won">Won</option>
                                     </TextField>
+                                    <TextField
+                                        size="small"
+                                        label="Notes"
+                                        name="notes"
+                                        value={clientForm.notes}
+                                        onChange={handleInputChange}
+                                        multiline
+                                        rows={2}
+                                    />
                                 </div>
                                 <Button
                                     variant="contained"
@@ -316,6 +325,11 @@ export default function DashboardPage() {
                                                         {client.phone} <br />
                                                         {client.status}
                                                     </span>
+                                                    {client.notes && (
+                                                        <p className="mt-2 text-sm text-black/80">
+                                                            <strong>Notes:</strong> {client.notes}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="mt-3 space-x-2">
                                                     <Button
@@ -404,6 +418,16 @@ export default function DashboardPage() {
                         <option value="Rejected">Rejected</option>
                         <option value="Won">Won</option>
                     </TextField>
+                    <TextField
+                        margin="dense"
+                        label="Notes"
+                        name="notes"
+                        fullWidth
+                        multiline
+                        rows={3}
+                        value={editForm.notes || ""}
+                        onChange={handleEditChange}
+                    />
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setEditModalOpen(false)}>Cancel</Button>

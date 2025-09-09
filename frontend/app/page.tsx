@@ -48,7 +48,7 @@ export default function Home() {
             variant="body2"
             className="mb-6 max-w-xs text-sm sm:text-base text-slate-100"
           >
-            Track clients, proposals and notes — lightweight, secure, and built
+            Track clients, proposals and important notes — lightweight, secure, and built
             for freelancers.
           </Typography>
 
