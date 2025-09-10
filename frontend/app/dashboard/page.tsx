@@ -35,7 +35,7 @@ type Client = {
     email: string;
     phone: string;
     status: "Proposal Sent" | "Interview Scheduled" | "Rejected" | "Won";
-    notes?: string; // 👈 added notes
+    notes?: string;
 };
 
 export default function DashboardPage() {
@@ -50,7 +50,7 @@ export default function DashboardPage() {
         email: "",
         phone: "",
         status: "Proposal Sent",
-        notes: "", // 👈 added
+        notes: "",
     });
 
     const [editModalOpen, setEditModalOpen] = useState(false);
@@ -90,7 +90,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients(Array.isArray(data) ? data : []); // backend sends plain array
+            setClients(Array.isArray(data.data) ? data.data : []); // ✅ fixed
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message || "Something went wrong");
@@ -120,7 +120,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => [...prev, data]);
+            setClients((prev) => [...prev, data.data]); // ✅ fixed
             setClientForm({ name: "", email: "", phone: "", status: "Proposal Sent", notes: "" });
             setSuccess("Client created successfully!");
         } catch (err) {
@@ -157,7 +157,7 @@ export default function DashboardPage() {
             const data = await res.json();
             if (!res.ok) throw new Error(data.message);
 
-            setClients((prev) => prev.map((c) => (c._id === editId ? data : c)));
+            setClients((prev) => prev.map((c) => (c._id === editId ? data.data : c))); // ✅ fixed
             setSuccess("Client updated successfully!");
             setEditModalOpen(false);
         } catch (err) {
@@ -226,7 +226,6 @@ export default function DashboardPage() {
                                     <Typography>
                                         Welcome back 👋
                                     </Typography>
-
                                 </div>
                             )}
 
