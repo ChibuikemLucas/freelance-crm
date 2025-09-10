@@ -200,32 +200,30 @@ export default function DashboardPage() {
     }, [success]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-cyan-700 via-sky-600 to-indigo-800 p-6 flex items-center justify-center">
+        <div className="relative min-h-screen bg-gradient-to-br from-cyan-700 via-sky-600 to-indigo-800 p-6 flex items-center justify-center">
             <motion.div
-                initial={{ opacity: 0, y: 30 }}
+                initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="w-full max-w-5xl"
+                className="relative w-full max-w-6xl rounded-3xl p-[2px] bg-gradient-to-r from-teal-400 via-sky-400 to-indigo-400 shadow-2xl"
             >
-                {loading ? (
-                    <div className="flex justify-center items-center h-64">
-                        <CircularProgress sx={{ color: "#38bdf8" }} />
-                    </div>
-                ) : (
-                    <Card className="rounded-3xl shadow-2xl bg-white/10 backdrop-blur-lg border border-white/10">
-                        <CardContent className="p-8 text-center">
+                <div className="rounded-3xl bg-white/10 backdrop-blur-lg border border-white/10 p-8">
+                    {loading ? (
+                        <div className="flex justify-center items-center h-64">
+                            <CircularProgress sx={{ color: "#38bdf8" }} />
+                        </div>
+                    ) : (
+                        <>
                             <Typography
                                 variant="h4"
-                                className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-indigo-400"
+                                className="font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 to-indigo-200"
                             >
                                 Dashboard
                             </Typography>
 
                             {user && (
-                                <div className="mt-4 text-black">
-                                    <Typography>
-                                        Welcome back 👋
-                                    </Typography>
+                                <div className="mt-2 text-center text-slate-200">
+                                    <Typography>Welcome back 👋</Typography>
                                 </div>
                             )}
 
@@ -247,7 +245,10 @@ export default function DashboardPage() {
 
                             {/* 🔹 Add Client Form */}
                             <div className="mt-8 space-y-4 text-left">
-                                <Typography variant="h6" className="text-black text-center">
+                                <Typography
+                                    variant="h6"
+                                    className="text-slate-100 text-center"
+                                >
                                     Add New Client
                                 </Typography>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -257,6 +258,7 @@ export default function DashboardPage() {
                                         name="name"
                                         value={clientForm.name}
                                         onChange={handleInputChange}
+                                        sx={{ input: { color: "#f8fafc" }, label: { color: "#cbd5e1" } }}
                                     />
                                     <TextField
                                         size="small"
@@ -264,6 +266,7 @@ export default function DashboardPage() {
                                         name="email"
                                         value={clientForm.email}
                                         onChange={handleInputChange}
+                                        sx={{ input: { color: "#f8fafc" }, label: { color: "#cbd5e1" } }}
                                     />
                                     <TextField
                                         size="small"
@@ -271,6 +274,7 @@ export default function DashboardPage() {
                                         name="phone"
                                         value={clientForm.phone}
                                         onChange={handleInputChange}
+                                        sx={{ input: { color: "#f8fafc" }, label: { color: "#cbd5e1" } }}
                                     />
                                     <TextField
                                         select
@@ -280,6 +284,7 @@ export default function DashboardPage() {
                                         value={clientForm.status}
                                         onChange={handleInputChange}
                                         SelectProps={{ native: true }}
+                                        sx={{ color: "#f8fafc" }}
                                     >
                                         <option value="Proposal Sent">Proposal Sent</option>
                                         <option value="Interview Scheduled">Interview Scheduled</option>
@@ -294,12 +299,20 @@ export default function DashboardPage() {
                                         onChange={handleInputChange}
                                         multiline
                                         rows={2}
+                                        sx={{ input: { color: "#f8fafc" }, label: { color: "#cbd5e1" } }}
                                     />
                                 </div>
                                 <Button
                                     variant="contained"
                                     onClick={createClient}
-                                    sx={{ borderRadius: "9999px", marginTop: "12px" }}
+                                    sx={{
+                                        borderRadius: "9999px",
+                                        marginTop: "12px",
+                                        background: "linear-gradient(90deg,#0284C7 0%,#2563EB 100%)",
+                                        "&:hover": {
+                                            background: "linear-gradient(90deg,#0369A1 0%,#1E40AF 100%)",
+                                        },
+                                    }}
                                 >
                                     Add Client
                                 </Button>
@@ -307,48 +320,56 @@ export default function DashboardPage() {
 
                             {/* 🔹 Clients List */}
                             <div className="mt-10 text-left">
-                                <Typography variant="h6" className="text-black text-center mb-4">
+                                <Typography
+                                    variant="h6"
+                                    className="text-slate-100 text-center mb-4"
+                                >
                                     Your Clients
                                 </Typography>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {clients.map((client) => (
-                                        <Card
+                                        <motion.div
                                             key={client._id}
-                                            className="rounded-xl shadow-md bg-white/30 p-4"
+                                            whileHover={{ scale: 1.02 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="rounded-2xl p-[2px] bg-gradient-to-r from-teal-400 via-sky-400 to-indigo-400 shadow-xl"
                                         >
-                                            <CardContent>
-                                                <div className="text-black">
-                                                    <strong>{client.name}</strong> <br />
-                                                    <span className="text-sm text-black/70">
-                                                        {client.email} <br />
-                                                        {client.phone} <br />
-                                                        {client.status}
-                                                    </span>
-                                                    {client.notes && (
-                                                        <p className="mt-2 text-sm text-black/80">
-                                                            <strong>Notes:</strong> {client.notes}
+                                            <Card className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
+                                                <CardContent className="p-4">
+                                                    <div className="text-slate-100">
+                                                        <strong className="text-lg">{client.name}</strong>
+                                                        <p className="text-sm text-slate-200">
+                                                            {client.email} <br />
+                                                            {client.phone} <br />
+                                                            {client.status}
                                                         </p>
-                                                    )}
-                                                </div>
-                                                <div className="mt-3 space-x-2">
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        onClick={() => openEditModal(client)}
-                                                    >
-                                                        Edit
-                                                    </Button>
-                                                    <Button
-                                                        size="small"
-                                                        variant="outlined"
-                                                        color="error"
-                                                        onClick={() => deleteClient(client._id)}
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
+                                                        {client.notes && (
+                                                            <p className="mt-2 text-sm text-slate-200">
+                                                                <strong>Notes:</strong> {client.notes}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                    <div className="mt-3 space-x-2">
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            onClick={() => openEditModal(client)}
+                                                            sx={{ color: "#e0f2fe", borderColor: "#38bdf8" }}
+                                                        >
+                                                            Edit
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="outlined"
+                                                            color="error"
+                                                            onClick={() => deleteClient(client._id)}
+                                                        >
+                                                            Delete
+                                                        </Button>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        </motion.div>
                                     ))}
                                 </div>
                             </div>
@@ -358,7 +379,7 @@ export default function DashboardPage() {
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: 0.4 }}
-                                className="mt-8"
+                                className="mt-8 text-center"
                             >
                                 <Button
                                     variant="contained"
@@ -369,9 +390,9 @@ export default function DashboardPage() {
                                     Logout
                                 </Button>
                             </motion.div>
-                        </CardContent>
-                    </Card>
-                )}
+                        </>
+                    )}
+                </div>
             </motion.div>
 
             {/* ✏️ Edit Client Modal */}
