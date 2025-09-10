@@ -336,15 +336,15 @@ export default function DashboardPage() {
                                         >
                                             <Card className="rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
                                                 <CardContent className="p-4">
-                                                    <div className="text-slate-100">
+                                                    <div className="text-black">
                                                         <strong className="text-lg">{client.name}</strong>
-                                                        <p className="text-sm text-slate-200">
+                                                        <p className="text-sm text-black">
                                                             {client.email} <br />
                                                             {client.phone} <br />
                                                             {client.status}
                                                         </p>
                                                         {client.notes && (
-                                                            <p className="mt-2 text-sm text-slate-200">
+                                                            <p className="mt-2 text-sm text-black">
                                                                 <strong>Notes:</strong> {client.notes}
                                                             </p>
                                                         )}
